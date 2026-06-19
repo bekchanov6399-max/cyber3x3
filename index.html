@@ -1,0 +1,1238 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CYBER 3×3 // КИБЕРПАНК</title>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Share+Tech+Mono&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg:      #050008;
+      --purple:  #b400ff;
+      --purple2: #7700cc;
+      --green:   #00ff88;
+      --green2:  #00cc66;
+      --pink:    #ff0080;
+      --cyan:    #00ffff;
+      --white:   #e0d0ff;
+      --orange:  #ff6600;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Press Start 2P', monospace;
+      background: var(--bg);
+      color: var(--white);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    /* Canvas слои */
+    #bg-canvas {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    #particle-canvas {
+      position: fixed;
+      inset: 0;
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    /* Scanlines CRT эффект */
+    .scanlines {
+      position: fixed;
+      inset: 0;
+      z-index: 2;
+      pointer-events: none;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0,0,0,0.12) 2px,
+        rgba(0,0,0,0.12) 4px
+      );
+    }
+
+    /* CRT виньетка */
+    .vignette {
+      position: fixed;
+      inset: 0;
+      z-index: 2;
+      pointer-events: none;
+      background: radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.85) 100%);
+    }
+
+    header, main, footer { position: relative; z-index: 3; }
+
+    /* ── BOOT SCREEN ── */
+    #boot-screen {
+      position: fixed;
+      inset: 0;
+      background: #000;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      gap: 28px;
+    }
+
+    .boot-logo {
+      font-size: clamp(1.4rem, 6vw, 2.8rem);
+      color: var(--purple);
+      text-shadow: 0 0 20px var(--purple), 0 0 60px var(--purple), 0 0 120px var(--purple2);
+      letter-spacing: 10px;
+      animation: bootPulse 0.6s ease-in-out infinite alternate;
+    }
+
+    @keyframes bootPulse {
+      from { text-shadow: 0 0 20px var(--purple), 0 0 40px var(--purple); }
+      to   { text-shadow: 0 0 40px var(--purple), 0 0 100px var(--purple), 0 0 160px var(--purple2); }
+    }
+
+    .boot-log {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: clamp(0.65rem, 2vw, 0.85rem);
+      color: var(--green);
+      text-align: left;
+      width: min(520px, 90vw);
+      min-height: 168px;
+      padding: 16px 18px;
+      border: 1px solid var(--green2);
+      background: rgba(0,255,136,0.04);
+      overflow: hidden;
+      box-shadow: 0 0 30px rgba(0,255,136,0.1), inset 0 0 20px rgba(0,255,136,0.03);
+    }
+
+    .boot-log .line {
+      display: block;
+      opacity: 0;
+      animation: lineFadeIn 0.25s forwards;
+      margin-bottom: 4px;
+    }
+
+    @keyframes lineFadeIn { to { opacity: 1; } }
+
+    .boot-bar-wrap {
+      width: min(420px, 80vw);
+      height: 6px;
+      background: rgba(180,0,255,0.15);
+      border: 1px solid var(--purple2);
+      overflow: hidden;
+    }
+
+    .boot-bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--purple2), var(--purple), var(--pink));
+      width: 0%;
+      transition: width 0.05s linear;
+      box-shadow: 0 0 14px var(--purple);
+    }
+
+    /* ── HEADER ── */
+    header {
+      width: 100%;
+      text-align: center;
+      padding: 34px 16px 26px;
+      border-bottom: 2px solid var(--purple);
+      box-shadow: 0 0 50px rgba(180,0,255,0.5), 0 4px 80px rgba(180,0,255,0.15);
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Текущая строка-поток внизу шапки */
+    header::after {
+      content: '';
+      position: absolute;
+      bottom: -1px; left: -50%; right: 0;
+      height: 2px;
+      width: 200%;
+      background: linear-gradient(90deg, transparent 0%, var(--cyan) 20%, var(--purple) 50%, var(--pink) 80%, transparent 100%);
+      animation: flowLine 3s linear infinite;
+    }
+
+    @keyframes flowLine {
+      0%   { transform: translateX(-50%); }
+      100% { transform: translateX(50%); }
+    }
+
+    header h1 {
+      font-size: clamp(1rem, 4vw, 1.9rem);
+      color: var(--green);
+      text-shadow:
+        0 0 10px var(--green),
+        0 0 30px var(--green),
+        0 0 70px var(--green2),
+        0 0 120px var(--green2);
+      letter-spacing: 6px;
+      animation: titleGlitch 5s infinite;
+    }
+
+    @keyframes titleGlitch {
+      0%,90%,100% {
+        text-shadow: 0 0 10px var(--green), 0 0 30px var(--green), 0 0 70px var(--green2);
+        transform: none; filter: none;
+      }
+      91% {
+        transform: translate(-4px, 0) skew(-3deg);
+        text-shadow: -4px 0 var(--pink), 4px 0 var(--cyan), 0 0 30px var(--green);
+      }
+      92% {
+        transform: translate(4px, 0) skew(3deg);
+        text-shadow: 4px 0 var(--pink), -4px 0 var(--cyan), 0 0 30px var(--green);
+      }
+      93% {
+        transform: none;
+        text-shadow: 0 0 10px var(--green), 0 0 30px var(--green), 0 0 70px var(--green2);
+      }
+      94% {
+        transform: translate(-2px, 1px) skew(1deg);
+        text-shadow: -2px 0 var(--pink), 2px 0 var(--cyan);
+        filter: brightness(1.5);
+      }
+      95%,100% {
+        transform: none;
+        text-shadow: 0 0 10px var(--green), 0 0 30px var(--green), 0 0 70px var(--green2);
+        filter: none;
+      }
+    }
+
+    .header-sub {
+      font-size: 0.45rem;
+      color: var(--purple);
+      margin-top: 12px;
+      letter-spacing: 5px;
+      text-shadow: 0 0 14px var(--purple), 0 0 30px var(--purple2);
+      animation: subBlink 2.5s ease-in-out infinite;
+    }
+
+    @keyframes subBlink {
+      0%,100% { opacity: 0.7; }
+      50%      { opacity: 1; text-shadow: 0 0 20px var(--purple), 0 0 50px var(--purple2); }
+    }
+
+    /* Уголки шапки */
+    .hdr-corner {
+      position: absolute;
+      width: 22px; height: 22px;
+    }
+    .hdr-corner.tl { top: 8px; left: 8px; border-top: 2px solid var(--cyan); border-left: 2px solid var(--cyan); box-shadow: -2px -2px 8px var(--cyan); }
+    .hdr-corner.tr { top: 8px; right: 8px; border-top: 2px solid var(--cyan); border-right: 2px solid var(--cyan); box-shadow: 2px -2px 8px var(--cyan); }
+    .hdr-corner.bl { bottom: 8px; left: 8px; border-bottom: 2px solid var(--cyan); border-left: 2px solid var(--cyan); box-shadow: -2px 2px 8px var(--cyan); }
+    .hdr-corner.br { bottom: 8px; right: 8px; border-bottom: 2px solid var(--cyan); border-right: 2px solid var(--cyan); box-shadow: 2px 2px 8px var(--cyan); }
+
+    /* ── MAIN ── */
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 16px 36px;
+      width: 100%;
+      max-width: 540px;
+      gap: 18px;
+    }
+
+    /* HUD-панели */
+    .hud-panel {
+      width: 100%;
+      max-width: 400px;
+      border: 1px solid rgba(180,0,255,0.35);
+      background: rgba(180,0,255,0.04);
+      padding: 14px 18px;
+      position: relative;
+      transition: box-shadow 0.3s;
+    }
+
+    .hud-panel:hover {
+      box-shadow: 0 0 20px rgba(180,0,255,0.2);
+    }
+
+    .hud-panel::before {
+      content: attr(data-label);
+      position: absolute;
+      top: -8px; left: 14px;
+      font-size: 0.32rem;
+      color: var(--purple);
+      background: var(--bg);
+      padding: 0 8px;
+      letter-spacing: 2px;
+      text-shadow: 0 0 8px var(--purple);
+    }
+
+    /* Ввод имени */
+    .name-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .name-row label {
+      font-size: 0.4rem;
+      color: var(--purple);
+      text-shadow: 0 0 8px var(--purple);
+      white-space: nowrap;
+    }
+
+    .name-row input {
+      flex: 1;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 0.45rem;
+      background: rgba(0,255,136,0.04);
+      border: 1px solid rgba(180,0,255,0.4);
+      color: var(--green);
+      padding: 10px 12px;
+      outline: none;
+      transition: all 0.3s;
+      text-shadow: 0 0 6px var(--green);
+    }
+
+    .name-row input:focus {
+      border-color: var(--purple);
+      box-shadow: 0 0 24px rgba(180,0,255,0.4), inset 0 0 12px rgba(180,0,255,0.05);
+    }
+
+    /* Выбор сложности */
+    .diff-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .diff-btn {
+      flex: 1;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 0.3rem;
+      padding: 9px 4px;
+      background: transparent;
+      border: 1px solid rgba(180,0,255,0.3);
+      color: rgba(180,0,255,0.6);
+      cursor: pointer;
+      letter-spacing: 1px;
+      transition: all 0.2s;
+    }
+
+    .diff-btn.active {
+      background: rgba(180,0,255,0.15);
+      border-color: var(--purple);
+      color: var(--white);
+      text-shadow: 0 0 10px var(--purple);
+      box-shadow: 0 0 16px rgba(180,0,255,0.3);
+    }
+
+    .diff-btn:hover:not(.active) {
+      border-color: var(--purple);
+      color: var(--purple);
+      background: rgba(180,0,255,0.07);
+    }
+
+    /* ── СТАТУС ── */
+    .status {
+      font-size: 0.58rem;
+      min-height: 3em;
+      text-align: center;
+      color: var(--white);
+      padding: 13px 22px 13px 34px;
+      border: 1px solid rgba(180,0,255,0.35);
+      background: rgba(180,0,255,0.05);
+      width: 100%;
+      max-width: 400px;
+      line-height: 1.9;
+      position: relative;
+      overflow: hidden;
+      transition: all 0.3s;
+    }
+
+    .status::before {
+      content: '▶';
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--purple);
+      font-size: 0.38rem;
+      animation: cursorBlink 1s step-end infinite;
+    }
+
+    /* Бегущая подсветка внутри статуса */
+    .status::after {
+      content: '';
+      position: absolute;
+      top: 0; left: -100%; width: 60%; height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(180,0,255,0.08), transparent);
+      animation: statusScan 4s ease-in-out infinite;
+    }
+
+    @keyframes statusScan {
+      0%   { left: -60%; }
+      100% { left: 120%; }
+    }
+
+    @keyframes cursorBlink {
+      0%,100% { opacity: 1; }
+      50%      { opacity: 0; }
+    }
+
+    .status.win-player {
+      color: var(--green);
+      text-shadow: 0 0 14px var(--green), 0 0 40px var(--green2);
+      border-color: var(--green);
+      box-shadow: 0 0 28px rgba(0,255,136,0.35), inset 0 0 24px rgba(0,255,136,0.06);
+      animation: winFlash 0.25s ease-in-out 4;
+    }
+
+    .status.win-cpu {
+      color: var(--pink);
+      text-shadow: 0 0 14px var(--pink);
+      border-color: var(--pink);
+      box-shadow: 0 0 28px rgba(255,0,128,0.35);
+      animation: winFlash 0.25s ease-in-out 4;
+    }
+
+    .status.draw {
+      color: var(--purple);
+      text-shadow: 0 0 14px var(--purple);
+      border-color: var(--purple);
+    }
+
+    @keyframes winFlash {
+      0%,100% { opacity: 1; }
+      50%      { opacity: 0.2; }
+    }
+
+    /* ── ИГРОВОЕ ПОЛЕ ── */
+    .board-wrap {
+      position: relative;
+      width: 100%;
+      max-width: 360px;
+    }
+
+    /* Угловые маркеры поля */
+    .bc {
+      position: absolute;
+      width: 22px; height: 22px;
+      z-index: 2;
+      pointer-events: none;
+    }
+    .bc.tl { top: -5px; left: -5px; border-top: 2px solid var(--cyan); border-left: 2px solid var(--cyan); box-shadow: -3px -3px 12px var(--cyan); }
+    .bc.tr { top: -5px; right: -5px; border-top: 2px solid var(--cyan); border-right: 2px solid var(--cyan); box-shadow: 3px -3px 12px var(--cyan); }
+    .bc.bl { bottom: -5px; left: -5px; border-bottom: 2px solid var(--cyan); border-left: 2px solid var(--cyan); box-shadow: -3px 3px 12px var(--cyan); }
+    .bc.br { bottom: -5px; right: -5px; border-bottom: 2px solid var(--cyan); border-right: 2px solid var(--cyan); box-shadow: 3px 3px 12px var(--cyan); }
+
+    /* Пульсирующий фон поля */
+    .board-wrap::before {
+      content: '';
+      position: absolute;
+      inset: -8px;
+      border: 1px solid rgba(180,0,255,0.2);
+      animation: boardGlow 3s ease-in-out infinite alternate;
+      pointer-events: none;
+    }
+
+    @keyframes boardGlow {
+      from { box-shadow: 0 0 15px rgba(180,0,255,0.1); }
+      to   { box-shadow: 0 0 40px rgba(180,0,255,0.35); }
+    }
+
+    .board {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+      width: 100%;
+      background: rgba(5,0,20,0.6);
+      padding: 6px;
+      border: 1px solid rgba(180,0,255,0.25);
+    }
+
+    .cell {
+      aspect-ratio: 1;
+      background: rgba(0, 0, 20, 0.85);
+      border: 1px solid rgba(180,0,255,0.28);
+      font-family: 'Press Start 2P', monospace;
+      font-size: clamp(1.6rem, 7vw, 2.4rem);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: transparent;
+      transition: border-color 0.15s, background 0.15s, transform 0.1s, box-shadow 0.15s;
+      user-select: none;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Шиммер при наведении */
+    .cell::after {
+      content: '';
+      position: absolute;
+      top: 0; left: -100%; width: 70%; height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(180,0,255,0.15), transparent);
+      opacity: 0;
+    }
+
+    .cell:hover:not(.taken)::after {
+      opacity: 1;
+      animation: cellShimmer 0.8s linear infinite;
+    }
+
+    @keyframes cellShimmer {
+      0%   { left: -100%; }
+      100% { left: 130%; }
+    }
+
+    .cell:hover:not(.taken) {
+      border-color: var(--purple);
+      background: rgba(180,0,255,0.1);
+      box-shadow: 0 0 24px rgba(180,0,255,0.4), inset 0 0 16px rgba(180,0,255,0.06);
+      transform: scale(1.04);
+    }
+
+    /* X — зелёный */
+    .cell.x {
+      color: var(--green);
+      border-color: var(--green2);
+      text-shadow: 0 0 12px var(--green), 0 0 36px var(--green), 0 0 70px var(--green2);
+      box-shadow: inset 0 0 24px rgba(0,255,136,0.1);
+      animation: cellPop 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.4);
+    }
+
+    /* O — розовый */
+    .cell.o {
+      color: var(--pink);
+      border-color: #990040;
+      text-shadow: 0 0 12px var(--pink), 0 0 36px var(--pink);
+      box-shadow: inset 0 0 24px rgba(255,0,128,0.1);
+      animation: cellPop 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.4);
+    }
+
+    @keyframes cellPop {
+      0%   { transform: scale(0.2) rotate(30deg); opacity: 0; }
+      70%  { transform: scale(1.15) rotate(-5deg); }
+      100% { transform: scale(1) rotate(0deg); opacity: 1; }
+    }
+
+    /* Победная клетка */
+    .cell.winner {
+      background: rgba(0,255,136,0.09);
+      border-color: var(--green) !important;
+      animation: winPulse 0.5s ease-in-out infinite alternate !important;
+    }
+
+    .cell.winner-cpu {
+      background: rgba(255,0,128,0.09);
+      border-color: var(--pink) !important;
+      animation: winPulseCpu 0.5s ease-in-out infinite alternate !important;
+    }
+
+    @keyframes winPulse {
+      from { box-shadow: 0 0 12px rgba(0,255,136,0.5), inset 0 0 8px rgba(0,255,136,0.1); }
+      to   { box-shadow: 0 0 40px rgba(0,255,136,1), inset 0 0 28px rgba(0,255,136,0.25), 0 0 70px rgba(0,255,136,0.4); }
+    }
+
+    @keyframes winPulseCpu {
+      from { box-shadow: 0 0 12px rgba(255,0,128,0.5), inset 0 0 8px rgba(255,0,128,0.1); }
+      to   { box-shadow: 0 0 40px rgba(255,0,128,1), inset 0 0 28px rgba(255,0,128,0.25), 0 0 70px rgba(255,0,128,0.4); }
+    }
+
+    .cell.taken { cursor: default; }
+
+    /* ── СЧЁТЧИК ── */
+    .scores {
+      display: flex;
+      gap: 8px;
+      width: 100%;
+      max-width: 400px;
+    }
+
+    .score-box {
+      flex: 1;
+      background: rgba(0,0,0,0.55);
+      border: 1px solid rgba(180,0,255,0.28);
+      padding: 14px 6px 12px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+      transition: border-color 0.3s;
+    }
+
+    .score-box::before {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 2px;
+      transform: scaleX(0);
+      transition: transform 0.3s;
+    }
+
+    .score-box.player-box::before { background: var(--green); box-shadow: 0 0 8px var(--green); }
+    .score-box.cpu-box::before    { background: var(--pink);  box-shadow: 0 0 8px var(--pink); }
+    .score-box.draw-box::before   { background: var(--purple); box-shadow: 0 0 8px var(--purple); }
+
+    .score-box:hover::before { transform: scaleX(1); }
+
+    .score-box .lbl {
+      display: block;
+      font-size: 0.3rem;
+      color: rgba(180,0,255,0.8);
+      margin-bottom: 9px;
+      letter-spacing: 1px;
+    }
+
+    .score-box .val {
+      font-size: 1.5rem;
+      transition: transform 0.1s;
+    }
+
+    .score-box.player-box .val { color: var(--green); text-shadow: 0 0 14px var(--green); }
+    .score-box.cpu-box    .val { color: var(--pink);  text-shadow: 0 0 14px var(--pink); }
+    .score-box.draw-box   .val { color: var(--purple); text-shadow: 0 0 14px var(--purple); }
+
+    .score-box .val.bump {
+      animation: scoreBump 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.5);
+    }
+
+    @keyframes scoreBump {
+      0%   { transform: scale(1); }
+      45%  { transform: scale(1.8); }
+      100% { transform: scale(1); }
+    }
+
+    /* ── КНОПКА ── */
+    .btn-new {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 0.55rem;
+      padding: 16px 36px;
+      background: transparent;
+      border: 2px solid var(--green);
+      color: var(--green);
+      cursor: pointer;
+      letter-spacing: 3px;
+      text-shadow: 0 0 10px var(--green);
+      box-shadow: 0 0 18px rgba(0,255,136,0.3), inset 0 0 10px rgba(0,255,136,0.04);
+      transition: all 0.25s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn-new::before {
+      content: '';
+      position: absolute;
+      top: 0; left: -100%; width: 100%; height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(0,255,136,0.25), transparent);
+      transition: left 0.5s;
+    }
+
+    .btn-new:hover::before { left: 100%; }
+
+    .btn-new:hover {
+      background: rgba(0,255,136,0.07);
+      box-shadow: 0 0 40px rgba(0,255,136,0.7), inset 0 0 24px rgba(0,255,136,0.1);
+      transform: scale(1.06);
+      border-color: var(--cyan);
+      color: var(--cyan);
+      text-shadow: 0 0 14px var(--cyan);
+    }
+
+    .btn-new:active { transform: scale(0.96); }
+
+    /* ── FOOTER ── */
+    footer {
+      width: 100%;
+      text-align: center;
+      padding: 14px;
+      font-size: 0.33rem;
+      color: rgba(180,0,255,0.45);
+      border-top: 1px solid rgba(180,0,255,0.2);
+      letter-spacing: 3px;
+      position: relative;
+      z-index: 3;
+    }
+
+    /* ── МОТОЦИКЛ НА ФОНЕ ── */
+    .moto-bg {
+      position: fixed;
+      bottom: -10px;
+      right: -40px;
+      width: min(480px, 60vw);
+      opacity: 0.07;
+      pointer-events: none;
+      z-index: 0;
+      filter: drop-shadow(0 0 24px var(--purple));
+      animation: motoFloat 6s ease-in-out infinite alternate;
+    }
+
+    @keyframes motoFloat {
+      from { transform: translateY(0); }
+      to   { transform: translateY(-12px); }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Канвасы -->
+<canvas id="bg-canvas"></canvas>
+<canvas id="particle-canvas"></canvas>
+
+<!-- CRT эффекты -->
+<div class="scanlines"></div>
+<div class="vignette"></div>
+
+<!-- Мотоцикл -->
+<svg class="moto-bg" viewBox="0 0 600 320" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="150" cy="230" r="80" stroke="#9d00ff" stroke-width="12" fill="none"/>
+  <circle cx="150" cy="230" r="50" stroke="#9d00ff" stroke-width="3" fill="none" opacity="0.5"/>
+  <circle cx="150" cy="230" r="18" fill="#9d00ff" opacity="0.8"/>
+  <line x1="150" y1="150" x2="150" y2="310" stroke="#9d00ff" stroke-width="3" opacity="0.4"/>
+  <line x1="70" y1="230" x2="230" y2="230" stroke="#9d00ff" stroke-width="3" opacity="0.4"/>
+  <line x1="93" y1="173" x2="207" y2="287" stroke="#9d00ff" stroke-width="3" opacity="0.4"/>
+  <line x1="207" y1="173" x2="93" y2="287" stroke="#9d00ff" stroke-width="3" opacity="0.4"/>
+  <circle cx="450" cy="240" r="70" stroke="#9d00ff" stroke-width="12" fill="none"/>
+  <circle cx="450" cy="240" r="44" stroke="#9d00ff" stroke-width="3" fill="none" opacity="0.5"/>
+  <circle cx="450" cy="240" r="16" fill="#9d00ff" opacity="0.8"/>
+  <line x1="450" y1="170" x2="450" y2="310" stroke="#9d00ff" stroke-width="3" opacity="0.4"/>
+  <line x1="380" y1="240" x2="520" y2="240" stroke="#9d00ff" stroke-width="3" opacity="0.4"/>
+  <line x1="400" y1="190" x2="500" y2="290" stroke="#9d00ff" stroke-width="3" opacity="0.4"/>
+  <line x1="500" y1="190" x2="400" y2="290" stroke="#9d00ff" stroke-width="3" opacity="0.4"/>
+  <polyline points="150,230 180,140 280,110 360,130 420,170 450,240" stroke="#9d00ff" stroke-width="10" fill="none" stroke-linejoin="round"/>
+  <polyline points="150,230 200,220 320,215 420,220 450,240" stroke="#9d00ff" stroke-width="6" fill="none" opacity="0.7"/>
+  <rect x="220" y="170" width="110" height="65" rx="8" fill="#5a0099" stroke="#9d00ff" stroke-width="4"/>
+  <path d="M220 220 Q170 240 130 260 Q110 268 90 262" stroke="#00ff41" stroke-width="8" fill="none" stroke-linecap="round"/>
+  <ellipse cx="86" cy="261" rx="10" ry="5" fill="#00ff41" opacity="0.7"/>
+  <path d="M260 110 Q310 95 370 110 Q380 115 370 130 Q310 115 260 125 Z" fill="#5a0099" stroke="#9d00ff" stroke-width="3"/>
+  <line x1="410" y1="140" x2="410" y2="95" stroke="#9d00ff" stroke-width="8" stroke-linecap="round"/>
+  <line x1="385" y1="95" x2="435" y2="95" stroke="#9d00ff" stroke-width="6" stroke-linecap="round"/>
+  <ellipse cx="460" cy="175" rx="22" ry="15" fill="#00ff41" opacity="0.9"/>
+  <ellipse cx="460" cy="175" rx="13" ry="9" fill="#ffffff" opacity="0.8"/>
+  <path d="M478 170 Q530 160 580 150" stroke="#00ff41" stroke-width="3" opacity="0.5"/>
+  <path d="M480 178 Q535 180 585 175" stroke="#00ff41" stroke-width="2" opacity="0.3"/>
+  <path d="M380 125 Q420 100 460 130 Q475 150 460 175 Q430 155 400 145 Z" fill="#3a006a" stroke="#9d00ff" stroke-width="3"/>
+  <path d="M180 225 Q300 218 420 222" stroke="#00ff41" stroke-width="3" opacity="0.6"/>
+  <path d="M185 215 Q300 208 415 213" stroke="#9d00ff" stroke-width="2" opacity="0.4"/>
+  <ellipse cx="300" cy="315" rx="200" ry="8" fill="#9d00ff" opacity="0.2"/>
+</svg>
+
+<!-- Boot Screen -->
+<div id="boot-screen">
+  <div class="boot-logo">CYBER 3×3</div>
+  <div class="boot-log" id="boot-log"></div>
+  <div class="boot-bar-wrap">
+    <div class="boot-bar" id="boot-bar"></div>
+  </div>
+</div>
+
+<!-- Шапка -->
+<header>
+  <div class="hdr-corner tl"></div>
+  <div class="hdr-corner tr"></div>
+  <div class="hdr-corner bl"></div>
+  <div class="hdr-corner br"></div>
+  <h1>⚡ КИБЕРПАНК 3Х3 ⚡</h1>
+  <p class="header-sub">&gt;&gt; ЧЕЛОВЕК VS МАШИНА &lt;&lt;</p>
+</header>
+
+<main>
+  <!-- Идентификация -->
+  <div class="hud-panel" data-label="// ИДЕНТИФИКАЦИЯ //">
+    <div class="name-row">
+      <label for="player-name">ID:</label>
+      <input id="player-name" type="text" maxlength="12" placeholder="ВВЕДИ ИМЯ" value="ИГРОК" />
+    </div>
+  </div>
+
+  <!-- Уровень угрозы -->
+  <div class="hud-panel" data-label="// УРОВЕНЬ УГРОЗЫ //" style="padding:10px 18px;">
+    <div class="diff-row">
+      <button class="diff-btn" data-diff="easy">ЛЕГКО</button>
+      <button class="diff-btn active" data-diff="medium">СРЕДНЕ</button>
+      <button class="diff-btn" data-diff="hard">ХАРДКОР</button>
+    </div>
+  </div>
+
+  <!-- Статус -->
+  <div class="status" id="status">ВАШ ХОД</div>
+
+  <!-- Поле -->
+  <div class="board-wrap">
+    <div class="bc tl"></div>
+    <div class="bc tr"></div>
+    <div class="bc bl"></div>
+    <div class="bc br"></div>
+    <div class="board" id="board">
+      <button class="cell" data-i="0"></button>
+      <button class="cell" data-i="1"></button>
+      <button class="cell" data-i="2"></button>
+      <button class="cell" data-i="3"></button>
+      <button class="cell" data-i="4"></button>
+      <button class="cell" data-i="5"></button>
+      <button class="cell" data-i="6"></button>
+      <button class="cell" data-i="7"></button>
+      <button class="cell" data-i="8"></button>
+    </div>
+  </div>
+
+  <!-- Счёт -->
+  <div class="scores">
+    <div class="score-box player-box">
+      <span class="lbl" id="player-label">ИГРОК</span>
+      <span class="val" id="score-player">0</span>
+    </div>
+    <div class="score-box draw-box">
+      <span class="lbl">НИЧЬЯ</span>
+      <span class="val" id="score-draw">0</span>
+    </div>
+    <div class="score-box cpu-box">
+      <span class="lbl">CPU</span>
+      <span class="val" id="score-cpu">0</span>
+    </div>
+  </div>
+
+  <button class="btn-new" id="btn-new">[ НОВАЯ ИГРА ]</button>
+</main>
+
+<footer>&gt; CYBER_OS v3.1.4 // СИСТЕМА АКТИВНА &lt;</footer>
+
+<script>
+// ══════════════════════════════════════
+// BOOT SEQUENCE
+// ══════════════════════════════════════
+const BOOT_LINES = [
+  { text: '[OK] Инициализация CYBER_OS v3.1.4...', color: '#00ff88' },
+  { text: '[OK] Загрузка нейронной сети противника...', color: '#00ff88' },
+  { text: '[OK] Калибровка матрицы тактических угроз...', color: '#00ff88' },
+  { text: '[OK] Подключение к боевому мейнфрейму...', color: '#00ff88' },
+  { text: '[OK] Активация протокола MINIMAX v9...', color: '#00ff88' },
+  { text: '[!!] ПРЕДУПРЕЖДЕНИЕ: ИИ активирован в боевом режиме', color: '#ff0080' },
+  { text: '[OK] Система готова. Ваш ход, боец.', color: '#00ffff' },
+];
+
+const bootLog    = document.getElementById('boot-log');
+const bootBar    = document.getElementById('boot-bar');
+const bootScreen = document.getElementById('boot-screen');
+let lineIdx = 0;
+
+function showBootLine() {
+  if (lineIdx >= BOOT_LINES.length) {
+    setTimeout(() => {
+      bootScreen.style.transition = 'opacity 0.9s ease';
+      bootScreen.style.opacity = '0';
+      setTimeout(() => bootScreen.style.display = 'none', 900);
+    }, 400);
+    return;
+  }
+  const { text, color } = BOOT_LINES[lineIdx];
+  const span = document.createElement('span');
+  span.className = 'line';
+  span.style.color = color;
+  span.textContent = text;
+  bootLog.appendChild(span);
+  bootLog.scrollTop = bootLog.scrollHeight;
+  lineIdx++;
+  bootBar.style.width = (lineIdx / BOOT_LINES.length * 100) + '%';
+  setTimeout(showBootLine, 290);
+}
+setTimeout(showBootLine, 500);
+
+// ══════════════════════════════════════
+// BACKGROUND CANVAS — сетка + перспектива
+// ══════════════════════════════════════
+const bgCanvas = document.getElementById('bg-canvas');
+const bgCtx    = bgCanvas.getContext('2d');
+let bgW, bgH, bgOff = 0;
+
+function resizeBg() {
+  bgW = bgCanvas.width  = window.innerWidth;
+  bgH = bgCanvas.height = window.innerHeight;
+}
+resizeBg();
+window.addEventListener('resize', resizeBg);
+
+function drawBg() {
+  bgCtx.clearRect(0, 0, bgW, bgH);
+
+  // Радиальный гло
+  const g = bgCtx.createRadialGradient(bgW/2, bgH/2, 0, bgW/2, bgH/2, bgW * 0.75);
+  g.addColorStop(0, 'rgba(80,0,120,0.18)');
+  g.addColorStop(1, 'rgba(5,0,8,0)');
+  bgCtx.fillStyle = g;
+  bgCtx.fillRect(0, 0, bgW, bgH);
+
+  // Сетка
+  const GRID = 50;
+  const off  = bgOff % GRID;
+  bgCtx.strokeStyle = 'rgba(120,0,200,0.18)';
+  bgCtx.lineWidth   = 0.8;
+  for (let x = -off; x < bgW + GRID; x += GRID) {
+    bgCtx.beginPath(); bgCtx.moveTo(x, 0); bgCtx.lineTo(x, bgH); bgCtx.stroke();
+  }
+  for (let y = -off; y < bgH + GRID; y += GRID) {
+    bgCtx.beginPath(); bgCtx.moveTo(0, y); bgCtx.lineTo(bgW, y); bgCtx.stroke();
+  }
+
+  // Перспективные линии снизу
+  const hor = bgH * 0.88;
+  bgCtx.strokeStyle = 'rgba(180,0,255,0.06)';
+  bgCtx.lineWidth   = 1;
+  for (let i = 0; i <= 18; i++) {
+    const x = bgW * (i / 18);
+    bgCtx.beginPath(); bgCtx.moveTo(bgW/2, hor); bgCtx.lineTo(x, bgH); bgCtx.stroke();
+  }
+
+  bgOff += 0.28;
+  requestAnimationFrame(drawBg);
+}
+drawBg();
+
+// ══════════════════════════════════════
+// PARTICLE CANVAS — огоньки / искры
+// ══════════════════════════════════════
+const pCanvas = document.getElementById('particle-canvas');
+const pCtx    = pCanvas.getContext('2d');
+let pW, pH;
+
+function resizeP() {
+  pW = pCanvas.width  = window.innerWidth;
+  pH = pCanvas.height = window.innerHeight;
+}
+resizeP();
+window.addEventListener('resize', resizeP);
+
+const particles = [];
+
+class Particle {
+  constructor(x, y, kind) {
+    this.x    = x ?? Math.random() * pW;
+    this.y    = y ?? pH + 10;
+    this.kind = kind || 'ember';
+    this.vx   = (Math.random() - 0.5) * (kind === 'burst' ? 10 : 1.6);
+    this.vy   = kind === 'burst'
+      ? (Math.random() - 0.5) * 10
+      : -(Math.random() * 2.2 + 0.7);
+    this.alpha = 1;
+    this.size  = Math.random() * (kind === 'burst' ? 5 : 3) + 1;
+    this.color = this._color();
+    this.decay = Math.random() * (kind === 'burst' ? 0.025 : 0.007) + 0.004;
+    this.w     = Math.random() * Math.PI * 2;
+    this.ws    = Math.random() * 0.07 + 0.02;
+  }
+
+  _color() {
+    const win   = ['#00ff88','#00ffff','#b400ff','#ff0080'];
+    const ember = ['#b400ff','#b400ff','#00ff88','#ff6600','#00ffff'];
+    const arr   = this.kind === 'win' ? win : ember;
+    return arr[Math.floor(Math.random() * arr.length)];
+  }
+
+  update() {
+    this.w  += this.ws;
+    this.x  += this.vx + Math.sin(this.w) * 0.35;
+    this.y  += this.vy;
+    this.vy *= 0.998;
+    this.alpha -= this.decay;
+    this.size  *= 0.998;
+  }
+
+  draw(ctx) {
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, this.alpha);
+    ctx.shadowBlur  = 14;
+    ctx.shadowColor = this.color;
+    ctx.fillStyle   = this.color;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, Math.max(0, this.size), 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  dead() { return this.alpha <= 0 || this.y < -30 || this.y > pH + 30; }
+}
+
+function spawnAmbient() {
+  if (particles.length < 90) particles.push(new Particle());
+}
+
+function animParticles() {
+  pCtx.clearRect(0, 0, pW, pH);
+  for (let i = particles.length - 1; i >= 0; i--) {
+    particles[i].update();
+    particles[i].draw(pCtx);
+    if (particles[i].dead()) particles.splice(i, 1);
+  }
+  requestAnimationFrame(animParticles);
+}
+
+setInterval(spawnAmbient, 110);
+animParticles();
+
+function burst(cx, cy, count, kind) {
+  for (let i = 0; i < count; i++) {
+    const p = new Particle(cx, cy, kind);
+    particles.push(p);
+  }
+}
+
+// Курсорный след
+document.addEventListener('mousemove', e => {
+  if (Math.random() < 0.04) {
+    const p = new Particle(e.clientX, e.clientY, 'ember');
+    p.size  = Math.random() * 1.8 + 0.4;
+    p.decay = 0.05;
+    particles.push(p);
+  }
+});
+
+// ══════════════════════════════════════
+// WEB AUDIO — синтезаторные звуки
+// ══════════════════════════════════════
+let audioCtx;
+function getAudio() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+function tone(freq, type, dur, vol = 0.13) {
+  try {
+    const ctx  = getAudio();
+    const osc  = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(freq * 0.5, ctx.currentTime + dur);
+    gain.gain.setValueAtTime(vol, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + dur);
+  } catch {}
+}
+const sndClick = () => tone(440, 'square', 0.08, 0.10);
+const sndCpu   = () => tone(180, 'sawtooth', 0.14, 0.07);
+const sndWin   = () => {
+  tone(523, 'square', 0.14, 0.11);
+  setTimeout(() => tone(659, 'square', 0.14, 0.11), 150);
+  setTimeout(() => tone(784, 'square', 0.28, 0.14), 300);
+};
+const sndLose  = () => {
+  tone(280, 'sawtooth', 0.18, 0.11);
+  setTimeout(() => tone(180, 'sawtooth', 0.28, 0.11), 200);
+};
+
+// ══════════════════════════════════════
+// GAME LOGIC
+// ══════════════════════════════════════
+const WINS = [
+  [0,1,2],[3,4,5],[6,7,8],
+  [0,3,6],[1,4,7],[2,5,8],
+  [0,4,8],[2,4,6]
+];
+
+let board      = Array(9).fill('');
+let gameOver   = false;
+let scores     = { player: 0, cpu: 0, draw: 0 };
+let difficulty = 'medium';
+
+const cells       = document.querySelectorAll('.cell');
+const statusEl    = document.getElementById('status');
+const nameInput   = document.getElementById('player-name');
+const playerLabel = document.getElementById('player-label');
+const scorePlayer = document.getElementById('score-player');
+const scoreDraw   = document.getElementById('score-draw');
+const scoreCpu    = document.getElementById('score-cpu');
+
+document.querySelectorAll('.diff-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    difficulty = btn.dataset.diff;
+    resetGame();
+  });
+});
+
+nameInput.addEventListener('input', () => {
+  playerLabel.textContent = (nameInput.value.trim() || 'ИГРОК').toUpperCase().slice(0, 8);
+});
+
+document.getElementById('btn-new').addEventListener('click', resetGame);
+cells.forEach(cell => cell.addEventListener('click', () => onPlayerClick(+cell.dataset.i)));
+
+function onPlayerClick(i) {
+  if (gameOver || board[i]) return;
+  sndClick();
+  board[i] = 'X';
+  render();
+
+  const rect = cells[i].getBoundingClientRect();
+  burst(rect.left + rect.width/2, rect.top + rect.height/2, 14, 'ember');
+
+  const res = checkResult();
+  if (res) { endGame(res); return; }
+
+  setStatus('CPU ДУМАЕТ...', '');
+  lockBoard(true);
+  const delay = { easy: 850, medium: 520, hard: 300 }[difficulty];
+  setTimeout(cpuMove, delay);
+}
+
+function cpuMove() {
+  board[getBestMove()] = 'O';
+  sndCpu();
+  render();
+  const res = checkResult();
+  if (res) {
+    endGame(res);
+  } else {
+    lockBoard(false);
+    setStatus('ВАШ ХОД', '');
+  }
+}
+
+function getBestMove() {
+  if (difficulty === 'hard')  return minimaxBest();
+  if (difficulty === 'easy')  return Math.random() < 0.55 ? pick([0,1,2,3,4,5,6,7,8]) : strategic();
+  return strategic();
+}
+
+function strategic() {
+  const win = findMark('O'); if (win !== null) return win;
+  const blk = findMark('X'); if (blk !== null) return blk;
+  if (!board[4]) return 4;
+  const c = pick([0,2,6,8]); if (c !== null) return c;
+  return pick([0,1,2,3,4,5,6,7,8]);
+}
+
+function minimaxBest() {
+  let best = -Infinity, move = null;
+  for (let i = 0; i < 9; i++) {
+    if (!board[i]) {
+      board[i] = 'O';
+      const s = minimax(board, 0, false);
+      board[i] = '';
+      if (s > best) { best = s; move = i; }
+    }
+  }
+  return move;
+}
+
+function minimax(b, depth, isMax) {
+  const r = winnerOf(b);
+  if (r === 'O') return 10 - depth;
+  if (r === 'X') return depth - 10;
+  if (b.every(v => v)) return 0;
+  if (isMax) {
+    let best = -Infinity;
+    for (let i = 0; i < 9; i++) {
+      if (!b[i]) { b[i]='O'; best = Math.max(best, minimax(b,depth+1,false)); b[i]=''; }
+    }
+    return best;
+  } else {
+    let best = Infinity;
+    for (let i = 0; i < 9; i++) {
+      if (!b[i]) { b[i]='X'; best = Math.min(best, minimax(b,depth+1,true)); b[i]=''; }
+    }
+    return best;
+  }
+}
+
+function winnerOf(b) {
+  for (const [a,c,d] of WINS) if (b[a] && b[a]===b[c] && b[a]===b[d]) return b[a];
+  return null;
+}
+
+function findMark(mark) {
+  for (const [a,b,c] of WINS) {
+    const line=[board[a],board[b],board[c]], idx=[a,b,c];
+    if (line.filter(v=>v===mark).length===2 && line.includes(''))
+      return idx[line.indexOf('')];
+  }
+  return null;
+}
+
+function pick(arr) {
+  const free = arr.filter(i => !board[i]);
+  return free.length ? free[Math.floor(Math.random()*free.length)] : null;
+}
+
+function checkResult() {
+  for (const [a,b,c] of WINS)
+    if (board[a] && board[a]===board[b] && board[a]===board[c]) return board[a];
+  return board.every(v=>v) ? 'draw' : null;
+}
+
+function endGame(result) {
+  gameOver = true;
+  if (result === 'X') {
+    const name = (nameInput.value.trim()||'ИГРОК').toUpperCase().slice(0,8);
+    scores.player++;
+    setStatus(`${name} ПОБЕДИЛ!`, 'win-player');
+    highlightWinners('winner');
+    sndWin();
+    setTimeout(() => burst(window.innerWidth/2, window.innerHeight/2, 70, 'win'), 80);
+    bumpScore('score-player');
+  } else if (result === 'O') {
+    scores.cpu++;
+    setStatus('CPU ПОБЕДИЛ!', 'win-cpu');
+    highlightWinners('winner-cpu');
+    sndLose();
+    bumpScore('score-cpu');
+  } else {
+    scores.draw++;
+    setStatus('НИЧЬЯ!', 'draw');
+    bumpScore('score-draw');
+  }
+  updateScores();
+}
+
+function bumpScore(id) {
+  const el = document.getElementById(id);
+  el.classList.remove('bump');
+  void el.offsetWidth;
+  el.classList.add('bump');
+}
+
+function render() {
+  cells.forEach((cell, i) => {
+    cell.textContent = board[i];
+    cell.className   = 'cell' + (board[i] ? ` taken ${board[i].toLowerCase()}` : '');
+  });
+}
+
+function highlightWinners(cls) {
+  for (const [a,b,c] of WINS) {
+    if (board[a] && board[a]===board[b] && board[a]===board[c]) {
+      [a,b,c].forEach(i => cells[i].classList.add(cls));
+      return;
+    }
+  }
+}
+
+function lockBoard(lock) {
+  cells.forEach((cell, i) => { if (!board[i]) cell.classList.toggle('taken', lock); });
+}
+
+function setStatus(text, mod) {
+  statusEl.textContent = text;
+  statusEl.className   = 'status ' + (mod || '');
+}
+
+function updateScores() {
+  scorePlayer.textContent = scores.player;
+  scoreDraw.textContent   = scores.draw;
+  scoreCpu.textContent    = scores.cpu;
+}
+
+function resetGame() {
+  board    = Array(9).fill('');
+  gameOver = false;
+  render();
+  setStatus('ВАШ ХОД', '');
+  burst(window.innerWidth/2, window.innerHeight/2.5, 22, 'ember');
+}
+</script>
+</body>
+</html>
