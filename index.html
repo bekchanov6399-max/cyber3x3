@@ -673,6 +673,78 @@
       from { transform: translateY(0); }
       to   { transform: translateY(-12px); }
     }
+
+    /* ── АДАПТИВ ── */
+    @media (max-width: 420px) {
+      header { padding: 20px 12px 16px; }
+      header h1 { font-size: clamp(0.7rem, 5.5vw, 1rem); letter-spacing: 2px; }
+      .header-sub { font-size: 0.35rem; letter-spacing: 2px; margin-top: 8px; }
+      .hdr-corner { width: 14px; height: 14px; }
+
+      main { padding: 12px 10px 20px; gap: 12px; }
+
+      .hud-panel { padding: 12px 12px; max-width: 100%; }
+      .hud-panel::before { font-size: 0.28rem; }
+
+      .name-row input { font-size: 0.38rem; padding: 9px 10px; }
+      .name-row label { font-size: 0.32rem; }
+
+      .diff-btn { font-size: 0.26rem; padding: 10px 2px; letter-spacing: 0; }
+
+      .status {
+        font-size: clamp(0.38rem, 3.5vw, 0.52rem);
+        padding: 12px 14px 12px 26px;
+        max-width: 100%;
+        min-height: 2.6em;
+      }
+      .status::before { font-size: 0.3rem; left: 8px; }
+
+      .board-wrap { max-width: 100%; }
+      .bc { width: 14px; height: 14px; }
+
+      .cell { font-size: clamp(1.4rem, 11vw, 2rem); }
+
+      .scores { max-width: 100%; }
+      .score-box .val { font-size: clamp(1rem, 9vw, 1.4rem); }
+      .score-box .lbl { font-size: 0.26rem; margin-bottom: 6px; }
+      .score-box { padding: 10px 4px 8px; }
+
+      .btn-new { font-size: 0.4rem; padding: 13px 18px; letter-spacing: 2px; }
+
+      footer { font-size: 0.28rem; letter-spacing: 1px; padding: 10px; }
+
+      .moto-bg { width: min(260px, 70vw); opacity: 0.05; }
+    }
+
+    @media (min-width: 421px) and (max-width: 640px) {
+      header { padding: 24px 14px 18px; }
+      header h1 { font-size: clamp(0.85rem, 4.5vw, 1.2rem); letter-spacing: 3px; }
+      main { padding: 16px 12px 28px; gap: 14px; }
+      .hud-panel { max-width: 100%; }
+      .status { max-width: 100%; }
+      .scores { max-width: 100%; }
+      .board-wrap { max-width: min(340px, 94vw); }
+    }
+
+    @media (min-width: 768px) {
+      main { max-width: 580px; }
+      .hud-panel, .status, .scores { max-width: 440px; }
+      .board-wrap { max-width: 400px; }
+      .cell { font-size: 2.6rem; }
+    }
+
+    @media (min-width: 1100px) {
+      main { max-width: 640px; gap: 22px; }
+      .hud-panel, .status, .scores { max-width: 480px; }
+      .board-wrap { max-width: 440px; }
+      header h1 { letter-spacing: 8px; }
+    }
+
+    /* touch: убираем мигание при тапе */
+    .cell, .btn-new, .diff-btn {
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
   </style>
 </head>
 <body>
@@ -978,8 +1050,10 @@ function burst(cx, cy, count, kind) {
   }
 }
 
-// Курсорный след
+// Курсорный след (только десктоп)
+const isTouchDevice = () => window.matchMedia('(hover: none)').matches;
 document.addEventListener('mousemove', e => {
+  if (isTouchDevice()) return;
   if (Math.random() < 0.04) {
     const p = new Particle(e.clientX, e.clientY, 'ember');
     p.size  = Math.random() * 1.8 + 0.4;
@@ -987,6 +1061,11 @@ document.addEventListener('mousemove', e => {
     particles.push(p);
   }
 });
+// Touch-вспышка на мобильных
+document.addEventListener('touchstart', e => {
+  const t = e.touches[0];
+  burst(t.clientX, t.clientY, 8, 'ember');
+}, { passive: true });
 
 // ══════════════════════════════════════
 // WEB AUDIO — синтезаторные звуки
